@@ -1,0 +1,431 @@
+﻿unit U_506proc;
+
+interface
+
+uses SysUtils, Dialogs;       //Модули для ввода/вывода данных
+  type
+   Client = record               //Тип клиента банка
+          Index:int64;           //Код клиента
+          SumVK: double;           //Величина вклада
+          ProcVK: double;          //Проценты вклада
+          DataPlus: string[10];  //Дата и
+          SumPlus: double;         //Сумма пополнения вклада
+          DataMinus: string[10]; //Дата и
+          SumMinus: double;        //Сумма изыманий вклада
+         end;
+   PUzel = ^ZpTwo;                //Тип указателя на узел
+   ZpTwo = record                //Тип узла списка
+         x: client;                 //Сведения о клиенте
+         next: PUzel;             //Указатель на следующий узел
+         pred: PUzel;             //Указатель на предыдущий узел
+        end;
+
+   FZap = file of Client; //Файловый тип для хранения данных о клиентах
+
+   {Операции для работы с двусвязанным списком }
+   procedure AddFirst(var f: PUzel; a: PUzel);{Вставить узел a первым в список}
+   procedure AddAfter(var old:PUzel; a: PUzel);{Вставить узел a после old}
+   function CheckIndex(var f:PUzel; ind:int64):boolean;{Проверка на оригинальность кода клиента}
+   function CheckData(s:string):boolean;{Проверка на правильность даты}
+
+   {Построить список; f - указатель на голову списка}
+   procedure BuildSpisok(var f: PUzel);
+   {Вывод списка в текстовый файл}
+   procedure WriteSpText(var f: PUzel;var ftxt:Text);
+
+   {Вывод списка в типизированный файл}
+   procedure WriteSpTip(var f: PUzel;var ftip:FZap);
+   {Построить список из тип. файла}
+   procedure BuildSpisokFF(var f: PUzel; var ftip:Fzap);
+
+   {Выделить из списка первый узел и вернуть его пользователю}
+   procedure DelFirstElement(var f,a: PUzel);
+   {Выделить из списка узел,следующий за узлом old и вернуть его пользователю}
+   procedure DelElement(row,num:integer;digit:int64;var a: PUzel);
+   {Удалить список}
+   procedure DelSpisok(var f: PUzel);
+   {добавить узлы в конец списка}
+   procedure AppUzels(var f: PUzel);
+   {найти запись по коду клиента}
+   procedure FindZp(var a:PUzel; digit:int64);
+   {сортировка с возрастанием даты пополнения}
+   procedure SortDataUp(Var f:PUzel;row:integer);
+   {сортировка с убыванием даты пополнения}
+   procedure SortDataDown(Var f:PUzel;row:integer);
+
+implementation
+
+    procedure AddFirst(var f: PUzel; a: PUzel);
+    begin
+     a^.next := f; //Добавляем узел а в голову списка
+     if f<> nil then f^.pred := a;
+     f:=a;
+    end;
+    procedure AddAfter(var old:PUzel; a: PUzel);
+    begin
+     a^.next := old^.next; //Связываем узел а с узлом, следующим за old
+     old^.next := a;       //Связываем узел old с узлом а.
+     if a^.next <> nil then a^.next^.pred := a;
+     a^.pred := old;
+    end;
+    function CheckIndex(var f:PUzel; ind:int64):boolean;
+    var a:PUzel;
+    begin
+    result:=False;
+    a:=f;
+    while (a<>nil) do //пробег по списку
+     begin
+     if ind = a^.x.index then exit; //если нашлось совпадение
+     a:=a^.next; //движение дальше
+     end;
+    result:=True; //нет совпадений
+    end;
+    function CheckData(s:string):boolean;
+    var two,four:integer;
+    c1,c2:char;
+    begin
+    result:=false;
+    if (Length(s)<>10) then exit;  //длина даты не равна 10 символов
+    if TryStrToInt(s[1]+s[2],two) = False then exit; //если ДД не численный
+    if (two > 31) or (two <=0) then exit;  //если ДД вне возможного диапазона
+    if TryStrToInt(s[4]+s[5],two) = False then exit; //если ММ не численный
+    if (two > 12) or (two<=0) then exit;  //если ММ вне диапазона
+    if TryStrToInt(s[7]+s[8]+s[9]+s[10],four) = False then exit; //если ГГГГ не численный
+    c1:=s[3]; c2:=s[6];
+    if ((c1='.') and (c2='.')) or ((c1='/') and (c2='/')) then result:=true
+    else exit; //символы между числами неверны
+    end;
+
+    procedure BuildSpisok(var f: PUzel); {f - указатель на голову списка}
+    var
+     a,d :PUzel; //а – указатель на созд. узел; d - на последний узел списка
+     ch: char;   //переменная для выхода из процедуры
+     i:integer; //кол-во клиентов
+     flag:boolean; //флажок для проверки ввода
+     S:string; //проверяемая строка даты
+    begin
+     f:= nil;
+     i:=1;
+     repeat
+      new(a); //выделяем память под узел а
+      with a^.x do //заполняем данные
+       begin
+        repeat //код клиента
+        flag:=TryStrToInt64(InputBox('('+IntToStr(i)+'-й Клиент) Введите номер клиента',' ',''),index);
+        if flag = false then ShowMessage ('Несовместивый тип ввода!')
+        else if (i>1) then
+         begin
+         flag:=CheckIndex (f,index);
+         if flag = False then //проверка на оригинальность кода клиента
+         ShowMessage ('Такой код клиента уже существует!');
+         end;
+        until (flag=True);
+        repeat //сумма вклада
+        flag:=TryStrToFloat(InputBox('Введите сумму вклада','руб. ',''),SumVK);
+        if flag = false then ShowMessage ('Несовместивый тип ввода!');
+        until (flag=True);
+        repeat //проценты
+        flag:=TryStrToFloat(InputBox('Введите проценты вклада','% ',''),ProcVK);
+        if flag = false then ShowMessage ('Несовместивый тип ввода!');
+        until (flag=True);
+        repeat //дата пополнения
+        s:= InputBox('Введите дату пополнения вклада','ДД.ММ.ГГГГ ','');
+        flag:= CheckData (s);
+        if flag=false then showmessage ('Неправильный ввод даты!')
+        else DataPlus:=s;
+        until (flag=true);
+        repeat //сумма пополнения
+        flag:=TryStrToFloat(InputBox('Введите сумму пополнения вклада','руб. ',''),SumPlus);
+        if flag = false then ShowMessage ('Несовместивый тип ввода!');
+        until (flag=True);
+        repeat //дата изымания
+        s:= InputBox('Введите дату изымания вклада','ДД.ММ.ГГГГ ','');
+        flag:= CheckData (s);
+        if flag=false then showmessage ('Неправильный ввод даты!')
+        else DataMinus:=s;
+        until (flag=true);
+        repeat //сумма изымания
+        flag:=TryStrToFloat(InputBox('Введите сумму изымания вклада','руб. ',''),SumMinus);
+        if flag = false then ShowMessage ('Несовместивый тип ввода!');
+        until (flag=True);
+       end;
+      if (f = nil) then
+         begin  //если нет первого элемента
+          AddFirst(f,a); //вставляем узел  а  в голову списка  f
+          d:= f; //запомнить указатель на последний узел списка
+         end
+         else
+         begin //если уже есть первый элемент
+          AddAfter(d,a); //добавляем узел в хвост списка
+          d := a; //запомнить указатель на последний узел списка
+         end;
+      ch:= InputBox('Для завершения ввода нажмите Y',' ',' ')[1];
+      inc(i);
+     until (ch = 'Y') or (ch ='y');
+    end;
+
+    procedure SortDataUp(Var f:PUzel; row:integer);
+    var temp:int64;//карман для кода клиента
+    i:integer; //переменная для цикла
+    change: boolean; //флажок для фиксации изменений
+    ptr:PUzel;
+  begin
+  for I := 1 to (row-1) do //совершить row-1 проходов
+   begin
+   ptr:=f;
+    REPEAT
+    change := false;
+    while not(ptr=nil) do  //обход списка
+     begin
+      if ptr^.next <> nil then //если существует следующий элемент
+      begin
+       if ptr^.x.index>ptr^.next^.x.index then //сравнение со следующим элементом
+       begin
+       {обмениваем}
+       temp:= ptr^.x.index;
+       ptr^.x.index:= ptr^.next^.x.index;
+       ptr^.next^.x.index:= temp;
+       change:=true; //произошло изменение
+       break;
+       end;
+      end;
+     ptr := ptr^.next; // двигаемся на следующий элемент
+     end;
+    UNTIL change = false;
+    end;
+  end;
+
+
+    procedure SortDataDown(Var f:PUzel; row:integer);
+    var temp:int64;//карман для кода клиента
+    i:integer;//переменная для цикла
+    change: boolean;//флажок для фиксации изменений
+    ptr:PUzel;
+  begin
+  for I := 1 to (row-1) do //совершить row-1 проходов
+   begin
+   ptr:=f;
+    REPEAT
+    change := false;
+    while not(ptr=nil) do  //обход списка
+     begin
+      if ptr^.next <> nil then //если существует следющий элемент
+      begin
+       if ptr^.x.index<ptr^.next^.x.index then //сравнение со следующим элементом
+       begin
+       {обмениваем}
+       temp:= ptr^.x.index;
+       ptr^.x.index:= ptr^.next^.x.index;
+       ptr^.next^.x.index:= temp;
+       change:=true; //произошло изменение
+       break;
+       end;
+      end;
+     ptr := ptr^.next; // двигаемся на следующий элемент
+     end;
+    UNTIL change = false;
+    end;
+  end;
+
+    procedure WriteSpText(var f: PUzel; var ftxt:Text);
+    var
+     p: PUzel;
+     i: integer;
+    begin
+     p:= f;
+     i:=0;
+     while not(p = nil) do //пробег по списку
+      begin
+       inc(i);
+       write(ftxt,i:6);
+       with p^.x do
+       begin
+       write(ftxt,index:13);
+       write(ftxt,SumVK:14:2);
+       write(ftxt,procVK:10:2);
+       write(ftxt,DataPlus:17);
+       write(ftxt,SumPlus:18:2);
+       write(ftxt,DataMinus:15);
+       write(ftxt,SumMinus:16:2);
+       writeln(ftxt)
+       end;
+       p:= p^.next;
+      end;
+    end;
+
+    procedure FindZp(var a:PUzel; digit:int64);
+    var f:PUzel;
+    i:integer; //номер строки в таблице
+    begin
+    f:=a;
+    i:=0;
+    while (f<>Nil) do //пробег по списку
+     begin
+     inc(i); 
+     if (f^.x.index=Digit) then //если нашлось совпадение
+      begin
+      showmessage ('Запись находится на '+IntToStr(i)+'-й строчке таблицы');
+      exit;
+      end;
+     f:=f^.next;
+     end;
+    ShowMessage ('Такой записи не существует');
+    end;
+
+    procedure DelFirstElement(var f,a: PUzel);
+    begin
+      a := f;          //после этой операции а указывает на первый узел списка
+      f := f^.next;             //указатель f перемещён на второй элемент списка
+      a^.next := nil;         //теперь первый узел полностью выделен из списка
+      if f<>nil then f^.pred := nil;
+    end;
+
+    procedure DelElement(row,num:integer;Digit : int64; var a: PUzel);
+    Var f, df : PUzel ;
+    begin
+          if num=1 then //если удаляется начальный элемент
+          begin
+          f := a; //Запомним адрес первого элемента списка
+          a := a^.Next; //Теперь а указывает на второй элемент списка
+          Dispose(f); //Освободим память, занятую переменной f^
+          end;
+          if num=row then //если где-то в середине списка
+          begin
+          //Найдем предпоследний элемент
+          f := a;
+          df :=a;
+          while f^.Next<>Nil do
+           Begin
+           df := f;
+           f := f^.Next;
+           End;
+          //Удаляем элемент f^ из списка и освобождаем занимаемую им память
+          df^.Next := Nil;
+          Dispose(f);
+          end;
+          if (num>1) and (num<row) then //если удаляется конечный элемент
+          begin
+          f := a; //Переменная f для хранения адреса удаляемого элемента
+          //Найдем адреса нужных элементов списка
+           while (f<>Nil) and (f^.x.index<>Digit) do
+           Begin
+           df := f;
+           f := f^.Next;
+           End;
+          df^.Next := f^.Next;
+          Dispose(f);
+          end;
+    end;
+
+
+   procedure DelSpisok(var f: PUzel);  //Удалить список
+   var a: PUzel;
+    begin
+      DelFirstElement(f,a);
+      dispose (f);
+    end;
+
+    {блок для тип. файла}
+   procedure WriteSpTip(var f: PUzel;var ftip:FZap);
+   var
+     p: PUzel;  //текущий указатель, перемещается от головы до хвоста списка
+     y: client; //переменная для записи
+   begin
+   rewrite(ftip); //перезаписываем файл
+   p:= f;
+     while not(p = nil) do //пробег по всему списку
+      begin
+       y:= p^.x;
+       write(ftip, y); //вносим запись в файл
+       p:= p^.next; //перемещаем указатель дальше
+      end;
+   end;
+
+   procedure BuildSpisokFF(var f: PUzel; var ftip:Fzap);
+   var
+     a,d :PUzel; //а – указатель на созд. узел; d - на последний узел списка
+    begin
+     f:= nil;
+     while not (eof(ftip)) do //пробег по всему файлу
+     begin
+      new(a); //выделяем память
+      read(ftip, a^.x); //считываем запись
+      if (f = nil) then
+         begin
+          AddFirst(f,a);
+          d:= f;
+         end
+         else
+         begin
+          AddAfter(d,a);
+          d := a;
+         end;
+     end;
+   end;
+
+    {Процедура добавления в хвост списка новых узлов}
+  procedure AppUzels(var f: PUzel);
+   var
+    a,p,d: PUzel; //указатели: а- на созданный узел, p- текущий ,d- на хвост списка
+    i,n: integer; //i - переменная для цикла; n - кол-во вставляемых узлов
+    flag:boolean;
+    s:string;
+   begin
+    p:= f;
+    while (p <> nil) do //цикл для определения указателя на хвост списка
+     begin
+      d:=p;
+      p:= p^.next;
+     end;
+    n:= StrToInt(InputBox('Введите число вставляемых узлов',' ',' '));
+    for i:=1 to n do //цикл вставки узлов в хвост списка
+     begin
+      new(a);
+      with a^.x do
+       begin
+        repeat //код клиента
+        flag:=TryStrToInt64(InputBox('('+IntToStr(i)+'-й Клиент) Введите номер клиента',' ',''),index);
+        if flag = false then ShowMessage ('Несовместивый тип ввода!')
+        else
+         begin
+         flag:=CheckIndex (f,index);
+         if flag = False then //проверка на оригинальность кода клиента
+         ShowMessage ('Такой код клиента уже существует!');
+         end;
+        until (flag=True);
+        repeat //сумма вклада
+        flag:=TryStrToFloat(InputBox('Введите сумму вклада','руб. ',''),SumVK);
+        if flag = false then ShowMessage ('Несовместивый тип ввода!');
+        until (flag=True);
+        repeat //проценты
+        flag:=TryStrToFloat(InputBox('Введите проценты вклада','% ',''),ProcVK);
+        if flag = false then ShowMessage ('Несовместивый тип ввода!');
+        until (flag=True);
+        repeat //дата пополнения
+        s:= InputBox('Введите дату пополнения вклада','ДД.ММ.ГГГГ ','');
+        flag:= CheckData (s);
+        if flag=false then showmessage ('Неправильный ввод даты!')
+        else DataPlus:=s;
+        until (flag=true);
+        repeat //сумма пополнения
+        flag:=TryStrToFloat(InputBox('Введите сумму пополнения вклада','руб. ',''),SumPlus);
+        if flag = false then ShowMessage ('Несовместивый тип ввода!');
+        until (flag=True);
+        repeat //дата изымания
+        s:= InputBox('Введите дату изымания вклада','ДД.ММ.ГГГГ ','');
+        flag:= CheckData (s);
+        if flag=false then showmessage ('Неправильный ввод даты!')
+        else DataMinus:=s;
+        until (flag=true);
+        repeat //сумма изымания
+        flag:=TryStrToFloat(InputBox('Введите сумму изымания вклада','руб. ',''),SumMinus);
+        if flag = false then ShowMessage ('Несовместивый тип ввода!');
+        until (flag=True);
+       end;
+      a^.next := nil;
+      a^.pred := nil;
+      AddAfter(d,a);
+      d := a;
+     end;
+    end;
+end.

@@ -1,0 +1,153 @@
+object F_Cursa: TF_Cursa
+  Left = 0
+  Top = 0
+  Caption = #1041#1072#1079#1072' '#1076#1072#1085#1085#1099#1093' '#1076#1083#1103' '#1086#1073#1089#1083#1091#1078#1080#1074#1072#1085#1080#1103' '#1082#1083#1080#1077#1085#1090#1086#1074' '#1073#1072#1085#1082#1072
+  ClientHeight = 389
+  ClientWidth = 791
+  Color = clBtnFace
+  Font.Charset = DEFAULT_CHARSET
+  Font.Color = clWindowText
+  Font.Height = -11
+  Font.Name = 'Tahoma'
+  Font.Style = []
+  Menu = MainMenu1
+  OldCreateOrder = False
+  OnShow = NameCol
+  PixelsPerInch = 96
+  TextHeight = 13
+  object LTxt: TLabel
+    Left = 330
+    Top = 367
+    Width = 107
+    Height = 13
+    Caption = #1058'XT '#1092#1072#1081#1083': '#1054#1090#1082#1083#1102#1095#1077#1085
+    Color = clWhite
+    ParentColor = False
+  end
+  object LTip: TLabel
+    Left = 680
+    Top = 367
+    Width = 109
+    Height = 13
+    Caption = 'DAT '#1092#1072#1081#1083': '#1054#1090#1082#1083#1102#1095#1077#1085
+  end
+  object LCount: TLabel
+    Left = 8
+    Top = 367
+    Width = 80
+    Height = 13
+    Caption = #1050#1086#1083'-'#1074#1086' '#1091#1079#1083#1086#1074': 0'
+  end
+  object StrGrid: TStringGrid
+    Left = 1
+    Top = 0
+    Width = 788
+    Height = 361
+    Color = clSilver
+    ColCount = 8
+    DrawingStyle = gdsGradient
+    FixedCols = 0
+    RowCount = 10
+    GradientEndColor = cl3DDkShadow
+    GradientStartColor = clSilver
+    TabOrder = 0
+    ColWidths = (
+      77
+      87
+      95
+      75
+      118
+      114
+      111
+      98)
+  end
+  object MainMenu1: TMainMenu
+    Left = 544
+    Top = 360
+    object NFile: TMenuItem
+      Caption = ' '#1060#1072#1081#1083
+      object NO: TMenuItem
+        Caption = #1054#1090#1082#1088#1099#1090#1100' '
+        object NOpenTxt: TMenuItem
+          Caption = #1058#1077#1082#1089#1090#1086#1074#1099#1081' (TXT)'
+          OnClick = NOpenTxtClick
+        end
+        object NOpenTip: TMenuItem
+          Caption = #1058#1080#1087#1080#1079#1080#1088#1086#1074#1072#1085#1085#1099#1081' (DAT)'
+          OnClick = NOpenTipClick
+        end
+      end
+      object NC: TMenuItem
+        Caption = #1047#1072#1082#1088#1099#1090#1100
+        object NCloseTxt: TMenuItem
+          Caption = #1058#1077#1082#1089#1090#1086#1074#1099#1081' (TXT)'
+          OnClick = NCloseTxtClick
+        end
+        object NCloseTip: TMenuItem
+          Caption = #1058#1080#1087#1080#1079#1080#1088#1086#1074#1072#1085#1085#1099#1081' (DAT)'
+          OnClick = NCloseTipClick
+        end
+      end
+    end
+    object NList: TMenuItem
+      Caption = #1047#1072#1087#1086#1083#1085#1080#1090#1100
+      object NListBuild: TMenuItem
+        Caption = #1047#1072#1087#1086#1083#1085#1080#1090#1100' '#1074#1088#1091#1095#1085#1091#1102
+        OnClick = NListBuildClick
+      end
+      object NListBuildFF: TMenuItem
+        Caption = #1047#1072#1087#1086#1083#1085#1080#1090#1100' '#1080#1079' DAT '#1092#1072#1081#1083#1072
+        OnClick = NListBuildFFClick
+      end
+      object NSL: TMenuItem
+        Caption = #1057#1086#1093#1088#1072#1085#1080#1090#1100' '#1074' '#1092#1072#1081#1083
+        object NSaveTxt: TMenuItem
+          Caption = #1058#1077#1082#1089#1090#1086#1074#1099#1081' (TXT)'
+          OnClick = NSaveTxtClick
+        end
+        object NSaveTip: TMenuItem
+          Caption = #1058#1080#1087#1080#1079#1080#1088#1086#1074#1072#1085#1085#1099#1081' (DAT)'
+          OnClick = NSaveTipClick
+        end
+      end
+    end
+    object NAct: TMenuItem
+      Caption = #1044#1077#1081#1089#1090#1074#1080#1103
+      object NAddUz: TMenuItem
+        Caption = #1044#1086#1073#1072#1074#1080#1090#1100' '#1091#1079#1083#1099
+        OnClick = NAddUzClick
+      end
+      object NDelElem: TMenuItem
+        Caption = #1059#1076#1072#1083#1080#1090#1100' '#1091#1079#1077#1083
+        OnClick = NDelElemClick
+      end
+      object NSort: TMenuItem
+        Caption = #1057#1086#1088#1090#1080#1088#1086#1074#1072#1090#1100' '#1087#1086' '#1082#1086#1076#1091' '#1082#1083#1080#1077#1085#1090#1072
+        object NSortUp: TMenuItem
+          Caption = #1055#1086' '#1074#1086#1079#1088#1072#1089#1090#1072#1085#1080#1102
+          OnClick = NSortUpClick
+        end
+        object NSortDown: TMenuItem
+          Caption = #1055#1086' '#1091#1073#1099#1074#1072#1085#1080#1102
+          OnClick = NSortDownClick
+        end
+      end
+      object NFindZp: TMenuItem
+        Caption = #1053#1072#1081#1090#1080' '#1087#1086' '#1082#1086#1076#1091' '#1082#1083#1080#1077#1085#1090#1072
+        OnClick = NFindZpClick
+      end
+      object NDelist: TMenuItem
+        Caption = #1059#1076#1072#1083#1080#1090#1100' '#1089#1087#1080#1089#1086#1082
+        OnClick = NDelistClick
+      end
+    end
+    object NHelp: TMenuItem
+      Caption = #1040#1074#1090#1086#1088
+      OnClick = NHelpClick
+    end
+  end
+  object OpenDialog1: TOpenDialog
+    Left = 576
+    Top = 360
+  end
+end

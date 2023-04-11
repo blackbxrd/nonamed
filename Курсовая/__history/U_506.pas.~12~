@@ -1,0 +1,287 @@
+﻿unit U_506;
+
+interface
+
+uses
+  Winapi.Windows, Winapi.Messages, System.SysUtils, System.Variants, System.Classes, Vcl.Graphics,
+  Vcl.Controls, Vcl.Forms, Vcl.Dialogs, U_506proc, Vcl.Menus, Vcl.StdCtrls,
+  Vcl.Grids;
+
+type
+  TF_Cursa = class(TForm)
+    MainMenu1: TMainMenu;
+    OpenDialog1: TOpenDialog;
+    NFile: TMenuItem;
+    NOpenTxt: TMenuItem;
+    NCloseTxt: TMenuItem;
+    NList: TMenuItem;
+    NListBuild: TMenuItem;
+    NSaveTxt: TMenuItem;
+    NDelist: TMenuItem;
+    NSaveTip: TMenuItem;
+    NOpenTip: TMenuItem;
+    NCloseTip: TMenuItem;
+    NListBuildFF: TMenuItem;
+    NDelElem: TMenuItem;
+    NAddUz: TMenuItem;
+    NHelp: TMenuItem;
+    NAct: TMenuItem;
+    StrGrid: TStringGrid;
+    LTxt: TLabel;
+    LTip: TLabel;
+    LCount: TLabel;
+    NFindZp: TMenuItem;
+    NSort: TMenuItem;
+    NSortUp: TMenuItem;
+    NSortDown: TMenuItem;
+    NO: TMenuItem;
+    NC: TMenuItem;
+    NSL: TMenuItem;
+    procedure NOpenTxtClick(Sender: TObject);//открыть тхт файл
+    procedure NCloseTxtClick(Sender: TObject);//закрыть тхт файл
+    procedure NSaveTxtClick(Sender: TObject);//сохранить список в тхт файл
+    procedure NOpenTipClick(Sender: TObject);//открыть тип. файл
+    procedure NCloseTipClick(Sender: TObject);//закрыть тип. файл
+    procedure NSaveTipClick(Sender: TObject);//сохранить данные в тип. файл
+
+    procedure NListBuildClick(Sender: TObject);//составить список вручную
+    procedure NListBuildFFClick(Sender: TObject); //составить список из файла
+    procedure NDelElemClick(Sender: TObject); // удалить конкретный элемент
+    procedure NDelistClick(Sender: TObject); // удалить весь список
+    procedure NAddUzClick(Sender: TObject); // добавить узлы в хвост списка
+    procedure NHelpClick(Sender: TObject); // вывоз справочной информации
+
+
+    procedure NameCol(Sender: TObject); //называние столбцов таблицы
+    procedure RefreshTable; //обновление таблицы после действий
+    procedure ClearTable; //очищение таблицы после удаления списка
+    function DelNum(var num:integer):int64; //получение кода клиента
+    procedure NFindZpClick(Sender: TObject); //поиск записи по коду клиента
+    procedure NSortUpClick(Sender: TObject); //сортировка возрастания по коду клиентов
+    procedure NSortDownClick(Sender: TObject);//и убывания
+  private
+    { Private declarations }
+  public
+    { Public declarations }
+  end;
+
+var
+  F_Cursa: TF_Cursa;
+  PList: PUzel;            //указатель на список
+  ftip: FZap;              //тип. файловая переменная
+  ftxt: textfile;          //текст. файловая переменная
+  Row,DC: integer;         //счётчик узлов и счётчик удалённых строк
+  flagtip,flagtxt:boolean; //индикаторы подключения файлов
+
+implementation
+
+{$R *.dfm}
+
+procedure TF_Cursa.NameCol(Sender: TObject);
+begin
+StrGrid.Cells[0,0]:='№';
+StrGrid.Cells[1,0]:='Код клиента';
+StrGrid.Cells[2,0]:='Баланс вклада';
+StrGrid.Cells[3,0]:='% вклада';
+StrGrid.Cells[4,0]:='Дата "+"';
+StrGrid.Cells[5,0]:='Сумма "-"';
+StrGrid.Cells[6,0]:='Дата "+"';
+StrGrid.Cells[7,0]:='Сумма "-"';
+end;
+
+procedure TF_Cursa.RefreshTable;
+var p:PUzel;
+begin
+p:= PList;
+while not (p = nil) do //пробег по всему списку
+ begin
+ inc (row);
+ StrGrid.RowCount:=row+1; //опускаемся на строчку ниже
+ with p^.x do  //записываем данные в таблицу
+  begin
+  StrGrid.Cells[0,row]:= IntToStr(row);
+  StrGrid.Cells[1,row]:= IntToStr(index);
+  StrGrid.Cells[2,row]:= FloatToStr(sumVK);
+  StrGrid.Cells[3,row]:= FloatToStr(procVK);
+  StrGrid.Cells[4,row]:= DataPlus;
+  StrGrid.Cells[5,row]:= FloatToStr(SumPlus);
+  StrGrid.Cells[6,row]:= DataMinus;
+  StrGrid.Cells[7,row]:= FloatToStr(SumMinus);
+  end;
+ p:= p^.next; //двигаем указатель на следующую запись
+ end;
+LCount.Caption:='Кол-во элементов: '+IntToStr(row); //обновляем счётчик элементов
+end;
+
+procedure TF_Cursa.ClearTable;
+var i, j:integer;
+begin
+for j:=1 to (StrGrid.RowCount+DC) do //очистка таблицы
+ for i:= 0 to 7 do                   //в данном диапазоне клеток
+  StrGrid.Cells[i,j]:= '';
+StrGrid.RowCount:=12; //возвращаем первоначальный вид таблицы
+LCount.Caption:='Кол-во элементов: 0'; //обнуляем счётчик элементов
+row:=0;
+end;
+
+function TF_Cursa.DelNum(var num:integer):int64;
+begin
+ num := StrToInt(InputBox('Введите номер удаляемой строки','#',''));
+ if (num>row) or (num<1) then //проверка на ошибки
+ begin
+ ShowMessage ('Неправильный ввод!');
+ exit;
+ end;
+ result:=StrToInt(StrGrid.Cells[1,num]); //возвращаем код клиента
+end;
+
+procedure TF_Cursa.NAddUzClick(Sender: TObject);
+begin
+AppUzels(PList);
+row:=0;
+RefreshTable;
+end;
+
+procedure TF_Cursa.NCloseTipClick(Sender: TObject);
+begin
+if flagtip = False then  //проверка на доступность файла
+ begin
+  showmessage('Файл уже отключен');
+  exit;
+ end;
+CloseFile(ftip);
+ShowMessage('Типизированный файл закрыт');
+LTip.Caption:='Типизированный файл: Отключен';
+flagtip:=False;
+end;
+
+procedure TF_Cursa.NCloseTxtClick(Sender: TObject);
+begin
+if flagtxt = False then //проверка на доступность файла
+ begin
+  showmessage('Файл уже отключен');
+  exit;
+ end;
+CloseFile(ftxt);
+ShowMessage('Текстовый файл закрыт');
+LTxt.Caption:='Текстовый файл: Отключен';
+flagtxt:=False;
+end;
+
+procedure TF_Cursa.NDelistClick(Sender: TObject);
+begin
+
+DelSpisok(PList);
+ShowMessage('Список удалён');
+ClearTable;
+end;
+
+procedure TF_Cursa.NFindZpClick(Sender: TObject);
+var digit:int64;
+begin
+digit:=StrToInt(InputBox('Введите код клиента',' ',''));
+FindZp(PList,digit);
+end;
+
+procedure TF_Cursa.NDelElemClick(Sender: TObject);
+var num:integer;
+digit:int64;
+begin
+digit:=DelNum(num);
+DelElement(row,num,digit,PList);
+row:=0;
+RefreshTable;
+end;
+
+procedure TF_Cursa.NHelpClick(Sender: TObject);
+begin
+ShowMessage('Курсовая работа №2' +#10 + 'Выполнил: Артемьев А. '+'Группа: ИВТ-19-1');
+end;
+
+procedure TF_Cursa.NListBuildClick(Sender: TObject);
+begin
+BuildSpisok(PList);
+RefreshTable;
+end;
+
+procedure TF_Cursa.NListBuildFFClick(Sender: TObject);
+begin
+if flagtip = False then //проверка на доступность файла
+ begin
+  showmessage('Файл не подключен');
+  exit;
+ end;
+BuildSpisokFF(PList, ftip);
+RefreshTable;
+end;
+
+procedure TF_Cursa.NOpenTipClick(Sender: TObject);
+var
+  s: string;
+begin
+ if not OpenDialog1.Execute then exit;
+ s := OpenDialog1.FileName;
+ AssignFile(ftip,s);
+ reset(ftip);
+ LTip.Caption:='DAT: Подключен';
+ flagtip:=True;
+end;
+
+procedure TF_Cursa.NOpenTxtClick(Sender: TObject);
+var
+  s: string;
+begin
+ if not OpenDialog1.Execute then exit;
+ s := OpenDialog1.FileName;
+ AssignFile(ftxt,s);
+ Append(ftxt);
+ LTxt.Caption:='TXT: Подключен';
+ flagtxt:=True;
+end;
+
+procedure TF_Cursa.NSaveTipClick(Sender: TObject);
+begin
+if flagtip = False then //проверка на доступность файла
+ begin
+  showmessage('Файл не подключен');
+  exit;
+ end;
+WriteSpTip(PList,ftip);
+ShowMessage('Сохранение в типизированный файл выполнено');
+end;
+
+procedure TF_Cursa.NSaveTxtClick(Sender: TObject);
+begin
+if flagtxt = False then //проверка на доступность файла
+ begin
+  showmessage('Файл не подключен');
+  exit;
+ end;
+  write(ftxt,'№');
+  write(ftxt,'Код клиента':13);
+  write(ftxt,'Баланс вклада':14);
+  write(ftxt,'% вклада':10);
+  write(ftxt,'Дата "+"':17);
+  write(ftxt,'Сумма "+"':18);
+  write(ftxt,'Дата "-"':15);
+  write(ftxt,'Сумма "-"':16);
+  writeln(ftxt)WriteSpText(PList,ftxt);
+  writeln(ftxt,' ');
+  ShowMessage('Сохранение в текстовый файл выполнено');
+end;
+
+procedure TF_Cursa.NSortDownClick(Sender: TObject);
+begin
+SortDataDown(PList,row); //основная процедура
+row:=0;
+RefreshTable;
+end;
+
+procedure TF_Cursa.NSortUpClick(Sender: TObject);
+begin
+SortDataUp(PList,row); //основная процедура
+row:=0;
+RefreshTable;
+end;
+
+end.
